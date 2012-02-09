@@ -178,9 +178,16 @@ module Mongoid::History
           else modified_attributes_for_update
         end)
 
-        @history_tracker_attributes[:original] = original
-        @history_tracker_attributes[:modified] = modified
+        @history_tracker_attributes[:original] = convert_times_to_utc(original)
+        @history_tracker_attributes[:modified] = convert_times_to_utc(modified)
         @history_tracker_attributes
+      end
+
+      def convert_times_to_utc(hash)
+        hash.inject(HashWithIndifferentAccess.new) do |h, (k,v)|
+          h[k] = v.respond_to?(:utc) ? v.utc : v
+          h
+        end
       end
 
       def track_update

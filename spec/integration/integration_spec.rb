@@ -14,9 +14,14 @@ describe Mongoid::History do
       field           :title
       field           :body
       field           :rating
+      field           :published_at, type: Time
 
       embeds_many     :comments
-      track_history   :on => [:title, :body], :track_destroy => true
+      track_history   :on => [:title, :body, :published_at], :track_destroy => true
+
+      def published_at
+        read_attribute(:published_at).in_time_zone("EST")
+      end
     end
 
     class Comment
@@ -44,7 +49,7 @@ describe Mongoid::History do
   before :each do
     @user = User.create(:name => "Aaron", :email => "aaron@randomemail.com")
     @another_user = User.create(:name => "Another Guy", :email => "anotherguy@randomemail.com")
-    @post = Post.create(:title => "Test", :body => "Post", :modifier => @user, :views => 100)
+    @post = Post.create(:title => "Test", :body => "Post", :modifier => @user, :views => 100, :published_at => 1.day.ago.in_time_zone("EST"))
     @comment = @post.comments.create(:title => "test", :body => "comment", :modifier => @user)
   end
 
@@ -132,6 +137,11 @@ describe Mongoid::History do
         @post.history_tracks.first.original.should == {
           "title" => "Test"
         }
+      end
+
+      it "should convert time fields for mongo friendly-ness" do
+        @post.update_attributes(:published_at => Time.now.in_time_zone("EST"))
+        @post.history_tracks.first.modified["published_at"].zone.should eq("UTC")
       end
 
       it "should assign modifier" do
